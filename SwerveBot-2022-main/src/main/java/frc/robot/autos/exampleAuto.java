@@ -15,35 +15,39 @@ import frc.robot.Constants;
 import frc.robot.subsystems.Swerve;
 import java.util.List;
 
+/* This class is a SequentialCommandGroup that sets up an example autonomous command for a robot with a Swerve drivetrain.
+It creates a TrajectoryConfig object and an example Trajectory, as well as a ProfiledPIDController for theta, 
+and a SwerveControllerCommand that uses the configured PIDControllers and the swerve kinematics.
+It finally adds commands to reset the odometry and then run the swerveControllerCommand. */
+
 public class exampleAuto extends SequentialCommandGroup {
-  public exampleAuto(Swerve s_Swerve) {
-    TrajectoryConfig config =
-        new TrajectoryConfig(
-                Constants.AutoConstants.kMaxSpeedMetersPerSecond,
-                Constants.AutoConstants.kMaxAccelerationMetersPerSecondSquared)
-            .setKinematics(Constants.Swerve.swerveKinematics);
 
-    // An example trajectory to follow.  All units in meters.
-    Trajectory exampleTrajectory =
-        TrajectoryGenerator.generateTrajectory(
-            // Start at the origin facing the +X direction
+    public exampleAuto(Swerve s_Swerve) {
+        // Configure trajectory
+        TrajectoryConfig config = new TrajectoryConfig(
+            Constants.AutoConstants.kMaxSpeedMetersPerSecond,
+            Constants.AutoConstants.kMaxAccelerationMetersPerSecondSquared
+        ).setKinematics(Constants.Swerve.swerveKinematics);
+        
+        // Generate trajectory
+        Trajectory exampleTrajectory = TrajectoryGenerator.generateTrajectory(
             new Pose2d(0, 0, new Rotation2d(0)),
-            // Pass through these two interior waypoints, making an 's' curve path
             List.of(new Translation2d(1, 1), new Translation2d(2, -1)),
-            // End 3 meters straight ahead of where we started, facing forward
             new Pose2d(3, 0, new Rotation2d(0)),
-            config);
-
-    var thetaController =
-        new ProfiledPIDController(
+            config
+        );
+        
+        // Configure theta PID Controller
+        var thetaController = new ProfiledPIDController(
             Constants.AutoConstants.kPThetaController,
             0,
             0,
-            Constants.AutoConstants.kThetaControllerConstraints);
-    thetaController.enableContinuousInput(-Math.PI, Math.PI);
-
-    SwerveControllerCommand swerveControllerCommand =
-        new SwerveControllerCommand(
+            Constants.AutoConstants.kThetaControllerConstraints
+        );
+        thetaController.enableContinuousInput(-Math.PI, Math.PI);
+        
+        // Create swerve controller command
+        SwerveControllerCommand swerveControllerCommand = new SwerveControllerCommand(
             exampleTrajectory,
             s_Swerve::getPose,
             Constants.Swerve.swerveKinematics,
@@ -51,10 +55,13 @@ public class exampleAuto extends SequentialCommandGroup {
             new PIDController(Constants.AutoConstants.kPYController, 0, 0),
             thetaController,
             s_Swerve::setModuleStates,
-            s_Swerve);
-
-    addCommands(
-        new InstantCommand(() -> s_Swerve.resetOdometry(exampleTrajectory.getInitialPose())),
-        swerveControllerCommand);
-  }
+            s_Swerve
+        );
+        
+        // Add commands to reset odometry and run swerve controller command
+        addCommands(
+            new InstantCommand(() -> s_Swerve.resetOdometry(exampleTrajectory.getInitialPose())),
+            swerveControllerCommand
+        );
+    }
 }

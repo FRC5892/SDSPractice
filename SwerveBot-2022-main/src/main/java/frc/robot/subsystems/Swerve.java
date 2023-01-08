@@ -13,21 +13,33 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
+/* 
+ * This class is responsible for controlling the swerve drive on the robot.
+ * It contains the features necessary to control the swerve drive,
+ * including the Pigeon2 gyro, the SwerveDriveOdometry,
+ * and the Field2d. 
+ */
 public class Swerve extends SubsystemBase {
+  // Create a Pigeon2 gyro
   private final Pigeon2 gyro;
 
+  // Create the swerve odometry and swerve module states
   private SwerveDriveOdometry swerveOdometry;
   private SwerveModule[] mSwerveMods;
 
+  // Create the Field2d
   private Field2d field;
-
+  
   public Swerve() {
+    // Initialize the gyro
     gyro = new Pigeon2(Constants.Swerve.pigeonID);
     gyro.configFactoryDefault();
     zeroGyro();
 
+    // Initialize the swerve odometry
     swerveOdometry = new SwerveDriveOdometry(Constants.Swerve.swerveKinematics, getYaw());
 
+    // Create the four swerve modules
     mSwerveMods =
         new SwerveModule[] {
           new SwerveModule(0, Constants.Swerve.Mod0.constants),
@@ -36,12 +48,15 @@ public class Swerve extends SubsystemBase {
           new SwerveModule(3, Constants.Swerve.Mod3.constants)
         };
 
+    // Initialize the Field2d
     field = new Field2d();
     SmartDashboard.putData("Field", field);
   }
 
+  // Control the swerve drive
   public void drive(
       Translation2d translation, double rotation, boolean fieldRelative, boolean isOpenLoop) {
+    // Calculate the swerve module states
     SwerveModuleState[] swerveModuleStates =
         Constants.Swerve.swerveKinematics.toSwerveModuleStates(
             fieldRelative
@@ -50,6 +65,7 @@ public class Swerve extends SubsystemBase {
                 : new ChassisSpeeds(translation.getX(), translation.getY(), rotation));
     SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, Constants.Swerve.maxSpeed);
 
+    // Set the desired state of the swerve modules
     for (SwerveModule mod : mSwerveMods) {
       mod.setDesiredState(swerveModuleStates[mod.moduleNumber], isOpenLoop);
     }
@@ -64,14 +80,17 @@ public class Swerve extends SubsystemBase {
     }
   }
 
+  // Get the current pose of the robot
   public Pose2d getPose() {
     return swerveOdometry.getPoseMeters();
   }
 
+  // Reset the odometry
   public void resetOdometry(Pose2d pose) {
     swerveOdometry.resetPosition(pose, getYaw());
   }
 
+  // Get the current swerve module states
   public SwerveModuleState[] getStates() {
     SwerveModuleState[] states = new SwerveModuleState[4];
     for (SwerveModule mod : mSwerveMods) {
@@ -80,10 +99,12 @@ public class Swerve extends SubsystemBase {
     return states;
   }
 
+  // Zero the gyro
   public void zeroGyro() {
     gyro.setYaw(0);
   }
 
+  // Get the current yaw of the robot
   public Rotation2d getYaw() {
     return (Constants.Swerve.invertGyro)
         ? Rotation2d.fromDegrees(360 - gyro.getYaw())
@@ -92,9 +113,11 @@ public class Swerve extends SubsystemBase {
 
   @Override
   public void periodic() {
+    // Update the odometry
     swerveOdometry.update(getYaw(), getStates());
     field.setRobotPose(getPose());
 
+    // Output the state of the swerve modules to the SmartDashboard
     for (SwerveModule mod : mSwerveMods) {
       SmartDashboard.putNumber(
           "Mod " + mod.moduleNumber + " Cancoder", mod.getCanCoder().getDegrees());
